@@ -1,0 +1,21 @@
+version: "{build}"
+
+platform:
+  - x86
+  - x64
+
+clone_folder: c:\gopath\src\github.com\LawrenceWoodman\ddataset
+
+environment:
+  GOPATH: c:\gopath
+
+install:
+  - echo %PATH%
+  - go version
+  - go env
+
+build_script:
+  - go get -v -t ./...
+
+test_script:
+  - go test -v ./...

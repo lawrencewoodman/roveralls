@@ -1,0 +1,4 @@
+# Vim Swap files
+*.swp
+
+roveralls.coverprofile
