@@ -32,6 +32,20 @@ func TestSubMain(t *testing.T) {
 		},
 		{dir: "fixtures",
 			config: &Config{
+				ignore:  ".git,vendor,good2",
+				cover:   "count",
+				help:    false,
+				short:   true,
+				verbose: false,
+			},
+			wantExitCode: 0,
+			wantFiles: []string{
+				filepath.Join("fixtures", "good", "good.go"),
+				filepath.Join("fixtures", "short", "short.go"),
+			},
+		},
+		{dir: "fixtures",
+			config: &Config{
 				ignore:  ".git,vendor",
 				cover:   "count",
 				help:    false,
