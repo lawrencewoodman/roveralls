@@ -65,7 +65,7 @@ func TestSubMain(t *testing.T) {
 
 		gotFiles, err := filesTested(wd, "roveralls.coverprofile")
 		if err != nil {
-			t.Fatal("filesTested err: %s", err)
+			t.Fatalf("filesTested err: %s", err)
 		}
 		if len(gotFiles) != len(c.wantFiles) {
 			t.Fatalf("Wrong files tested.  want: %s, got: %s", c.wantFiles, gotFiles)
