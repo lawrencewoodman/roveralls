@@ -26,8 +26,8 @@ func TestSubMain(t *testing.T) {
 			},
 			wantExitCode: 0,
 			wantFiles: []string{
-				"fixtures/good/good.go",
-				"fixtures/good2/good2.go",
+				filepath.Join("fixtures", "good", "good.go"),
+				filepath.Join("fixtures", "good2", "good2.go"),
 			},
 		},
 		{dir: "fixtures",
@@ -40,9 +40,9 @@ func TestSubMain(t *testing.T) {
 			},
 			wantExitCode: 0,
 			wantFiles: []string{
-				"fixtures/good/good.go",
-				"fixtures/good2/good2.go",
-				"fixtures/short/short.go",
+				filepath.Join("fixtures", "good", "good.go"),
+				filepath.Join("fixtures", "good2", "good2.go"),
+				filepath.Join("fixtures", "short", "short.go"),
 			},
 		},
 	}
