@@ -11,5 +11,5 @@ before_install:
 script:
   - go test -v ./...
   - go install
-  - $HOME/gopath/bin/roveralls
+  - $HOME/gopath/bin/roveralls -ignore=fixtures,.git
   - $HOME/gopath/bin/goveralls -coverprofile=roveralls.coverprofile -service=travis-ci
