@@ -13,30 +13,16 @@ import (
 	"strings"
 )
 
-const helpString = `
-usage: roveralls [-covermode mode] [-ignore=dir1,dir2...] [-short] [-v]
-
+var Usage = func() {
+	const desc = `
 roveralls runs coverage tests on a package and all its sub-packages.  The
 coverage profile is output as a single file called 'roveralls.coverprofile'
 for use by tools such as goveralls.
-
-The options are:
-  -covermode set,count,atomic
-    default: count
-
-  -ignore dir1,dir2
-    A comma separated list of directory names to ignore, relative to
-    working directory.
-    default: '.git,vendor'
-
-  -short
-    Tell long-running tests to shorten their run time.
-    default: false
-
-  -v
-    Verbose output.
-    default: false
 `
+	fmt.Fprintf(os.Stderr, "%s\n", desc)
+	fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
+	flag.PrintDefaults()
+}
 
 const (
 	defaultIgnores = ".git,vendor"
@@ -94,7 +80,7 @@ func subMain(config *Config) int {
 	if err := handleFlags(config); err != nil {
 		l.Printf("\n%s\n", err)
 		if _, ok := err.(ErrInvalidCoverMode); ok {
-			help()
+			Usage()
 		}
 		return 1
 	}
@@ -109,27 +95,28 @@ func subMain(config *Config) int {
 	return 0
 }
 
-func help() {
-	fmt.Printf(helpString)
-}
-
 func parseFlags() *Config {
 	config := &Config{}
 	flag.StringVar(
 		&config.cover,
 		"covermode",
 		"count",
-		"Mode to run when testing files",
+		"Mode to run when testing files: `count,set,atomic`",
 	)
 	flag.StringVar(
 		&config.ignore,
 		"ignore",
 		defaultIgnores,
-		"-ignore [dir1,dir2...]: comma separated list of directory names to ignore",
+		"Comma separated list of directory names to ignore: `dir1,dir2,...`",
 	)
-	flag.BoolVar(&config.verbose, "v", false, "-v [true|false]")
-	flag.BoolVar(&config.short, "short", false, "-short [true|false]")
-	flag.BoolVar(&config.help, "help", false, "-help")
+	flag.BoolVar(&config.verbose, "v", false, "Verbose output")
+	flag.BoolVar(
+		&config.short,
+		"short",
+		false,
+		"Tell long-running tests to shorten their run time",
+	)
+	flag.BoolVar(&config.help, "help", false, "Display this help")
 	flag.Parse()
 	return config
 }
@@ -137,7 +124,7 @@ func parseFlags() *Config {
 func handleFlags(config *Config) error {
 	gopath := filepath.Clean(os.Getenv("GOPATH"))
 	if config.help {
-		help()
+		Usage()
 		return nil
 	}
 
