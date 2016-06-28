@@ -30,6 +30,13 @@ To see the help for the command:
               Tell long-running tests to shorten their run time
           -v	Verbose output
 
+
+View Output in a Web Browser
+----------------------------
+To view the code coverage for you packge in a browser:
+
+    $ go tool cover -html=roveralls.coverprofile
+
 Use with goveralls
 ------------------
  The output of `roveralls` is the same as the the standard `go test -coverprofile=profile.coverprofile` but with multiple files tested in the output file.  This can therefore be used with tools such as `goveralls`.
