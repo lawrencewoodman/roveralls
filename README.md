@@ -9,6 +9,7 @@ This tool was inspired by [github.com/go-playground/overalls](https://github.com
 Usage
 -----
 At its simplest, to test the current package and sub-packages and create a 'roveralls.coverprofile' file in the directory that you run the command:
+
     $ roveralls
 
 To see the help for the command:
