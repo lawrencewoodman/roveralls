@@ -3,6 +3,7 @@ roveralls
 
 A Go recursive coverage testing tool.
 
+[![GoDoc](https://godoc.org/github.com/LawrenceWoodman/roveralls?status.svg)](https://godoc.org/github.com/LawrenceWoodman/roveralls)
 [![Build Status](https://travis-ci.org/LawrenceWoodman/roveralls.svg?branch=master)](https://travis-ci.org/LawrenceWoodman/roveralls)
 [![Build status](https://ci.appveyor.com/api/projects/status/5dcyd6wgu7fxt538?svg=true)](https://ci.appveyor.com/project/LawrenceWoodman/roveralls)
 [![Coverage Status](https://coveralls.io/repos/LawrenceWoodman/roveralls/badge.svg?branch=master)](https://coveralls.io/r/LawrenceWoodman/roveralls?branch=master)
