@@ -1,3 +1,6 @@
+// Copyright (c) 2016 Lawrence Woodman <lwoodman@vlifesystems.com>
+// Licensed under an MIT licence.  Please see LICENCE.md for details.
+
 package main
 
 import (
