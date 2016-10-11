@@ -1,6 +1,13 @@
 roveralls
 =========
+
 A Go recursive coverage testing tool.
+
+[![Build Status](https://travis-ci.org/LawrenceWoodman/roveralls.svg?branch=master)](https://travis-ci.org/LawrenceWoodman/roveralls)
+[![Build status](https://ci.appveyor.com/api/projects/status/5dcyd6wgu7fxt538?svg=true)](https://ci.appveyor.com/project/LawrenceWoodman/roveralls)
+[![Coverage Status](https://coveralls.io/repos/LawrenceWoodman/roveralls/badge.svg?branch=master)](https://coveralls.io/r/LawrenceWoodman/roveralls?branch=master)
+[![Go Report Card](https://goreportcard.com/badge/github.com/LawrenceWoodman/roveralls)](https://goreportcard.com/report/github.com/LawrenceWoodman/roveralls)
+
 
 roveralls runs coverage tests on a package and all its sub-packages.  The coverage profile is output as a single file called 'roveralls.coverprofile' for use by tools such as goveralls.
 
@@ -49,11 +56,6 @@ If you wanted to call it from a `.travis.yml` script you could use:
 
 Contributing
 ------------
-
-[![Build Status](https://travis-ci.org/LawrenceWoodman/roveralls.svg?branch=master)](https://travis-ci.org/LawrenceWoodman/roveralls)
-[![Build status](https://ci.appveyor.com/api/projects/status/5dcyd6wgu7fxt538?svg=true)](https://ci.appveyor.com/project/LawrenceWoodman/roveralls)
-[![Coverage Status](https://coveralls.io/repos/LawrenceWoodman/roveralls/badge.svg?branch=master)](https://coveralls.io/r/LawrenceWoodman/roveralls?branch=master)
-[![Go Report Card](https://goreportcard.com/badge/github.com/LawrenceWoodman/roveralls)](https://goreportcard.com/report/github.com/LawrenceWoodman/roveralls)
 
 If you want to improve this program make a pull request to the [repo](https://github.com/LawrenceWoodman/roveralls) on github.  Please put any pull requests in a separate branch to ease integration and add a test to prove that it works.  If you find a bug, please report it at the project's [issues tracker](https://github.com/LawrenceWoodman/roveralls/issues) also on github.
 
