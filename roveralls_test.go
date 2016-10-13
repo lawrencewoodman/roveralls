@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"errors"
 	"fmt"
 	"os"
@@ -13,18 +14,12 @@ import (
 func TestSubMain(t *testing.T) {
 	cases := []struct {
 		dir          string
-		config       *Config
+		cmdArgs      []string
 		wantExitCode int
 		wantFiles    []string
 	}{
 		{dir: "fixtures",
-			config: &Config{
-				ignore:  ".git,vendor",
-				cover:   "count",
-				help:    false,
-				short:   false,
-				verbose: false,
-			},
+			cmdArgs:      []string{os.Args[0], "-covermode=count"},
 			wantExitCode: 0,
 			wantFiles: []string{
 				filepath.Join("fixtures", "good", "good.go"),
@@ -32,12 +27,11 @@ func TestSubMain(t *testing.T) {
 			},
 		},
 		{dir: "fixtures",
-			config: &Config{
-				ignore:  ".git,vendor,good2",
-				cover:   "count",
-				help:    false,
-				short:   true,
-				verbose: false,
+			cmdArgs: []string{
+				os.Args[0],
+				"-covermode=count",
+				"-ignore=.git,vendor,good2",
+				"-short",
 			},
 			wantExitCode: 0,
 			wantFiles: []string{
@@ -46,12 +40,10 @@ func TestSubMain(t *testing.T) {
 			},
 		},
 		{dir: "fixtures",
-			config: &Config{
-				ignore:  ".git,vendor",
-				cover:   "count",
-				help:    false,
-				short:   true,
-				verbose: false,
+			cmdArgs: []string{
+				os.Args[0],
+				"-covermode=count",
+				"-short",
 			},
 			wantExitCode: 0,
 			wantFiles: []string{
@@ -65,17 +57,23 @@ func TestSubMain(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer os.Chdir(wd)
 	for _, c := range cases {
+		var gotErr bytes.Buffer
 		if err := os.Chdir(wd); err != nil {
 			t.Fatalf("ChDir(%s) err: %s", c.dir, err)
 		}
 		if err := os.Chdir(c.dir); err != nil {
 			t.Fatalf("ChDir(%s) err: %s", c.dir, err)
 		}
-		exitCode := subMain(c.config)
+		exitCode := subMain(c.cmdArgs, &gotErr)
 		if exitCode != c.wantExitCode {
-			t.Fatalf("subMain() incorrect exit code, got: %d, want: %d",
+			t.Fatalf("subMain: incorrect exit code, got: %d, want: %d",
 				exitCode, c.wantExitCode)
+		}
+
+		if gotErr.String() != "" {
+			t.Fatalf("subMain: gotErr: %s", gotErr)
 		}
 
 		gotFiles, err := filesTested(wd, "roveralls.coverprofile")
@@ -89,6 +87,49 @@ func TestSubMain(t *testing.T) {
 			if _, ok := gotFiles[wantFile]; !ok {
 				t.Fatalf("No cover entries for file: %s", wantFile)
 			}
+		}
+	}
+}
+
+func TestSubMain_errors(t *testing.T) {
+	cases := []struct {
+		dir          string
+		cmdArgs      []string
+		wantExitCode int
+		wantErr      string
+	}{
+		{dir: "fixtures",
+			cmdArgs:      []string{os.Args[0], "-covermode=nothing"},
+			wantExitCode: 1,
+			wantErr:      "invalid covermode 'nothing'\n" + usageMsg(),
+		},
+		{dir: "fixtures",
+			cmdArgs:      []string{os.Args[0], "-bob"},
+			wantExitCode: 2,
+			wantErr:      "flag provided but not defined: -bob\n" + usagePartialMsg(),
+		},
+	}
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Chdir(wd)
+	for _, c := range cases {
+		var gotErr bytes.Buffer
+		if err := os.Chdir(wd); err != nil {
+			t.Fatalf("ChDir(%s) err: %s", c.dir, err)
+		}
+		if err := os.Chdir(c.dir); err != nil {
+			t.Fatalf("ChDir(%s) err: %s", c.dir, err)
+		}
+		exitCode := subMain(c.cmdArgs, &gotErr)
+		if exitCode != c.wantExitCode {
+			t.Errorf("subMain: incorrect exit code, got: %d, want: %d",
+				exitCode, c.wantExitCode)
+		}
+
+		if gotErr.String() != c.wantErr {
+			t.Errorf("subMain: gotErr: %s, wantErr: %s", gotErr.String(), c.wantErr)
 		}
 	}
 }

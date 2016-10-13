@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -16,15 +17,36 @@ import (
 	"strings"
 )
 
+var flagSet *flag.FlagSet
+
 var Usage = func() {
+	subUsage(os.Stderr)
+}
+
+func subUsage(out io.Writer) {
+	fmt.Fprintf(out, usageMsg())
+}
+
+func usageMsg() string {
+	var b bytes.Buffer
 	const desc = `
 roveralls runs coverage tests on a package and all its sub-packages.  The
 coverage profile is output as a single file called 'roveralls.coverprofile'
 for use by tools such as goveralls.
 `
-	fmt.Fprintf(os.Stderr, "%s\n", desc)
-	fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
-	flag.PrintDefaults()
+	fmt.Fprintf(&b, "%s\n", desc)
+	fmt.Fprintf(&b, "Usage:\n")
+	flagSet.SetOutput(&b)
+	flagSet.PrintDefaults()
+	return b.String()
+}
+
+func usagePartialMsg() string {
+	var b bytes.Buffer
+	fmt.Fprintf(&b, "Usage:\n")
+	flagSet.SetOutput(&b)
+	flagSet.PrintDefaults()
+	return b.String()
 }
 
 const (
@@ -73,17 +95,20 @@ func (c *Config) ignoreDir(relDir string) bool {
 }
 
 func main() {
-	config := parseFlags()
-	os.Exit(subMain(config))
+	os.Exit(subMain(os.Args, os.Stderr))
 }
 
-func subMain(config *Config) int {
-	l := log.New(os.Stderr, "", 0)
+func subMain(cmdArgs []string, outErr io.Writer) int {
+	l := log.New(outErr, "", 0)
+	config, err := parseFlags(cmdArgs, outErr)
+	if err != nil {
+		return 2
+	}
 
-	if err := handleFlags(config); err != nil {
-		l.Printf("\n%s\n", err)
+	if err := handleFlags(config, outErr); err != nil {
+		l.Printf("%s\n", err)
 		if _, ok := err.(InvalidCoverModeError); ok {
-			Usage()
+			subUsage(outErr)
 		}
 		return 1
 	}
@@ -98,36 +123,38 @@ func subMain(config *Config) int {
 	return 0
 }
 
-func parseFlags() *Config {
+func parseFlags(cmdArgs []string, outErr io.Writer) (*Config, error) {
 	config := &Config{}
-	flag.StringVar(
+	flagSet = flag.NewFlagSet("", flag.ContinueOnError)
+	flagSet.SetOutput(outErr)
+	flagSet.StringVar(
 		&config.cover,
 		"covermode",
 		"count",
 		"Mode to run when testing files: `count,set,atomic`",
 	)
-	flag.StringVar(
+	flagSet.StringVar(
 		&config.ignore,
 		"ignore",
 		defaultIgnores,
 		"Comma separated list of directory names to ignore: `dir1,dir2,...`",
 	)
-	flag.BoolVar(&config.verbose, "v", false, "Verbose output")
-	flag.BoolVar(
+	flagSet.BoolVar(&config.verbose, "v", false, "Verbose output")
+	flagSet.BoolVar(
 		&config.short,
 		"short",
 		false,
 		"Tell long-running tests to shorten their run time",
 	)
-	flag.BoolVar(&config.help, "help", false, "Display this help")
-	flag.Parse()
-	return config
+	flagSet.BoolVar(&config.help, "help", false, "Display this help")
+	err := flagSet.Parse(cmdArgs[1:])
+	return config, err
 }
 
-func handleFlags(config *Config) error {
+func handleFlags(config *Config, outErr io.Writer) error {
 	gopath := filepath.Clean(os.Getenv("GOPATH"))
 	if config.help {
-		Usage()
+		subUsage(outErr)
 		return nil
 	}
 
