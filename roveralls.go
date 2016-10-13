@@ -32,29 +32,29 @@ const (
 	outFilename    = "roveralls.coverprofile"
 )
 
-type ErrInvalidCoverMode string
+type InvalidCoverModeError string
 
-func (e ErrInvalidCoverMode) Error() string {
+func (e InvalidCoverModeError) Error() string {
 	return fmt.Sprintf("invalid covermode '%s'", string(e))
 }
 
-type ErrGoTest struct {
+type GoTestError struct {
 	err    error
 	output string
 }
 
-func (e ErrGoTest) Error() string {
+func (e GoTestError) Error() string {
 	return fmt.Sprintf("error from go test: %s\noutput: %s",
 		e.err, e.output)
 }
 
-type ErrWalking struct {
+type WalkingError struct {
 	dir string
 	err error
 }
 
-func (e ErrWalking) Error() string {
-	return fmt.Sprintf("could not walk working directory '%s'\n%s\n",
+func (e WalkingError) Error() string {
+	return fmt.Sprintf("could not walk working directory '%s': %s",
 		e.dir, e.err)
 }
 
@@ -82,7 +82,7 @@ func subMain(config *Config) int {
 
 	if err := handleFlags(config); err != nil {
 		l.Printf("\n%s\n", err)
-		if _, ok := err.(ErrInvalidCoverMode); ok {
+		if _, ok := err.(InvalidCoverModeError); ok {
 			Usage()
 		}
 		return 1
@@ -141,7 +141,7 @@ func handleFlags(config *Config) error {
 
 	validCoverModes := map[string]bool{"set": true, "count": true, "atomic": true}
 	if _, ok := validCoverModes[config.cover]; !ok {
-		return ErrInvalidCoverMode(config.cover)
+		return InvalidCoverModeError(config.cover)
 	}
 
 	arr := strings.Split(config.ignore, ",")
@@ -167,7 +167,7 @@ func testCoverage(config *Config) error {
 
 	walker := makeWalker(wd, &buff, config)
 	if err := filepath.Walk(wd, walker); err != nil {
-		return ErrWalking{
+		return WalkingError{
 			dir: wd,
 			err: err,
 		}
@@ -252,7 +252,7 @@ func processDir(path string, config *Config, buff *bytes.Buffer) error {
 	)
 	cmd.Stdout = &cmdOut
 	if err := cmd.Run(); err != nil {
-		return ErrGoTest{
+		return GoTestError{
 			err:    err,
 			output: cmdOut.String(),
 		}

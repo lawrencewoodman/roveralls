@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -89,6 +90,39 @@ func TestSubMain(t *testing.T) {
 				t.Fatalf("No cover entries for file: %s", wantFile)
 			}
 		}
+	}
+}
+
+func TestInvalidCoverModeErrorError(t *testing.T) {
+	err := InvalidCoverModeError("fred")
+	want := "invalid covermode 'fred'"
+	got := err.Error()
+	if got != want {
+		t.Errorf("Error() got: %s, want: %s", got, want)
+	}
+}
+
+func TestGoTestErrorError(t *testing.T) {
+	err := GoTestError{
+		err:    errors.New("this is an error"),
+		output: "baby did a bad bad thing",
+	}
+	want := "error from go test: this is an error\noutput: baby did a bad bad thing"
+	got := err.Error()
+	if got != want {
+		t.Errorf("Error() got: %s, want: %s", got, want)
+	}
+}
+
+func TestWalkingErrorError(t *testing.T) {
+	err := WalkingError{
+		err: errors.New("this is an error"),
+		dir: "/tmp/someplace",
+	}
+	want := "could not walk working directory '/tmp/someplace': this is an error"
+	got := err.Error()
+	if got != want {
+		t.Errorf("Error() got: %s, want: %s", got, want)
 	}
 }
 
