@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -17,10 +16,11 @@ import (
 	"strings"
 )
 
-var flagSet *flag.FlagSet
+// This is a horrible cludge so that errors can be tested properly
+var program *Program
 
 var Usage = func() {
-	subUsage(os.Stderr)
+	subUsage(program.outErr)
 }
 
 func subUsage(out io.Writer) {
@@ -36,16 +36,18 @@ for use by tools such as goveralls.
 `
 	fmt.Fprintf(&b, "%s\n", desc)
 	fmt.Fprintf(&b, "Usage:\n")
-	flagSet.SetOutput(&b)
-	flagSet.PrintDefaults()
+	program.flagSet.SetOutput(&b)
+	program.flagSet.PrintDefaults()
+	program.flagSet.SetOutput(program.outErr)
 	return b.String()
 }
 
 func usagePartialMsg() string {
 	var b bytes.Buffer
 	fmt.Fprintf(&b, "Usage:\n")
-	flagSet.SetOutput(&b)
-	flagSet.PrintDefaults()
+	program.flagSet.SetOutput(&b)
+	program.flagSet.PrintDefaults()
+	program.flagSet.SetOutput(program.outErr)
 	return b.String()
 }
 
@@ -80,86 +82,85 @@ func (e WalkingError) Error() string {
 		e.dir, e.err)
 }
 
-type Config struct {
+type Program struct {
 	ignore  string
 	cover   string
 	help    bool
 	short   bool
 	verbose bool
 	ignores map[string]bool
+	cmdArgs []string
+	flagSet *flag.FlagSet
+	out     io.Writer
+	outErr  io.Writer
 }
 
-func (c *Config) ignoreDir(relDir string) bool {
-	_, ignore := c.ignores[relDir]
-	return ignore
+func InitProgram(cmdArgs []string, out io.Writer, outErr io.Writer) {
+	program = &Program{out: out, outErr: outErr, cmdArgs: cmdArgs}
+	program.initFlagSet()
 }
 
-func main() {
-	os.Exit(subMain(os.Args, os.Stderr))
-}
-
-func subMain(cmdArgs []string, outErr io.Writer) int {
-	l := log.New(outErr, "", 0)
-	config, err := parseFlags(cmdArgs, outErr)
-	if err != nil {
-		return 2
+func (p *Program) Run() int {
+	if err := p.flagSet.Parse(p.cmdArgs[1:]); err != nil {
+		return 1
 	}
-
-	if err := handleFlags(config, outErr); err != nil {
-		l.Printf("%s\n", err)
+	if err := p.handleFlags(); err != nil {
+		fmt.Fprintf(p.outErr, "%s\n", err)
 		if _, ok := err.(InvalidCoverModeError); ok {
-			subUsage(outErr)
+			subUsage(p.outErr)
 		}
 		return 1
 	}
-	if config.help {
+	if p.help {
+		subUsage(p.out)
 		return 0
 	}
 
-	if err := testCoverage(config); err != nil {
-		l.Printf("\n%s\n", err)
+	if err := p.testCoverage(); err != nil {
+		fmt.Fprintf(p.outErr, "\n%s\n", err)
 		return 1
 	}
 	return 0
 }
 
-func parseFlags(cmdArgs []string, outErr io.Writer) (*Config, error) {
-	config := &Config{}
-	flagSet = flag.NewFlagSet("", flag.ContinueOnError)
-	flagSet.SetOutput(outErr)
-	flagSet.StringVar(
-		&config.cover,
+func (p *Program) ignoreDir(relDir string) bool {
+	_, ignore := p.ignores[relDir]
+	return ignore
+}
+
+func (p *Program) initFlagSet() {
+	p.flagSet = flag.NewFlagSet("", flag.ContinueOnError)
+	p.flagSet.SetOutput(p.outErr)
+	p.flagSet.StringVar(
+		&p.cover,
 		"covermode",
 		"count",
 		"Mode to run when testing files: `count,set,atomic`",
 	)
-	flagSet.StringVar(
-		&config.ignore,
+	p.flagSet.StringVar(
+		&p.ignore,
 		"ignore",
 		defaultIgnores,
 		"Comma separated list of directory names to ignore: `dir1,dir2,...`",
 	)
-	flagSet.BoolVar(&config.verbose, "v", false, "Verbose output")
-	flagSet.BoolVar(
-		&config.short,
+	p.flagSet.BoolVar(&p.verbose, "v", false, "Verbose output")
+	p.flagSet.BoolVar(
+		&p.short,
 		"short",
 		false,
 		"Tell long-running tests to shorten their run time",
 	)
-	flagSet.BoolVar(&config.help, "help", false, "Display this help")
-	err := flagSet.Parse(cmdArgs[1:])
-	return config, err
+	p.flagSet.BoolVar(&p.help, "help", false, "Display this help")
 }
 
-func handleFlags(config *Config, outErr io.Writer) error {
+func (p *Program) handleFlags() error {
 	gopath := filepath.Clean(os.Getenv("GOPATH"))
-	if config.help {
-		subUsage(outErr)
+	if p.help {
 		return nil
 	}
 
-	if config.verbose {
-		fmt.Println("GOPATH:", gopath)
+	if p.verbose {
+		fmt.Fprintln(p.out, "GOPATH:", gopath)
 	}
 
 	if len(gopath) == 0 || gopath == "." {
@@ -167,32 +168,32 @@ func handleFlags(config *Config, outErr io.Writer) error {
 	}
 
 	validCoverModes := map[string]bool{"set": true, "count": true, "atomic": true}
-	if _, ok := validCoverModes[config.cover]; !ok {
-		return InvalidCoverModeError(config.cover)
+	if _, ok := validCoverModes[p.cover]; !ok {
+		return InvalidCoverModeError(p.cover)
 	}
 
-	arr := strings.Split(config.ignore, ",")
-	config.ignores = make(map[string]bool, len(arr))
+	arr := strings.Split(p.ignore, ",")
+	p.ignores = make(map[string]bool, len(arr))
 	for _, v := range arr {
-		config.ignores[v] = true
+		p.ignores[v] = true
 	}
 	return nil
 }
 
 var modeRegexp = regexp.MustCompile("mode: [a-z]+\n")
 
-func testCoverage(config *Config) error {
+func (p *Program) testCoverage() error {
 	var buff bytes.Buffer
 
 	wd, err := os.Getwd()
 	if err != nil {
 		return err
 	}
-	if config.verbose {
-		fmt.Println("Working dir:", wd)
+	if p.verbose {
+		fmt.Fprintln(p.out, "Working dir:", wd)
 	}
 
-	walker := makeWalker(wd, &buff, config)
+	walker := p.makeWalker(wd, &buff)
 	if err := filepath.Walk(wd, walker); err != nil {
 		return WalkingError{
 			dir: wd,
@@ -202,7 +203,7 @@ func testCoverage(config *Config) error {
 
 	final := buff.String()
 	final = modeRegexp.ReplaceAllString(final, "")
-	final = fmt.Sprintf("mode: %s\n%s", config.cover, final)
+	final = fmt.Sprintf("mode: %s\n%s", p.cover, final)
 
 	if err := ioutil.WriteFile(outFilename, []byte(final), 0644); err != nil {
 		return fmt.Errorf("error writing to: %s, %s", outFilename, err)
@@ -210,10 +211,9 @@ func testCoverage(config *Config) error {
 	return nil
 }
 
-func makeWalker(
+func (p *Program) makeWalker(
 	wd string,
 	buff *bytes.Buffer,
-	config *Config,
 ) func(string, os.FileInfo, error) error {
 	return func(path string, info os.FileInfo, err error) error {
 		if !info.IsDir() {
@@ -225,7 +225,7 @@ func makeWalker(
 			return fmt.Errorf("error creating relative path")
 		}
 
-		if config.ignoreDir(rel) {
+		if p.ignoreDir(rel) {
 			return filepath.SkipDir
 		}
 
@@ -234,21 +234,18 @@ func makeWalker(
 			return fmt.Errorf("error checking for test files")
 		}
 		if len(files) == 0 {
-			if config.verbose {
-				fmt.Printf("No Go Test files in dir: %s, skipping\n", rel)
+			if p.verbose {
+				fmt.Fprintf(p.out, "No Go test files in dir: %s, skipping\n", rel)
 			}
 			return nil
 		}
-		return processDir(path, config, buff)
+		return p.processDir(wd, path, buff)
 	}
 }
 
-func processDir(path string, config *Config, buff *bytes.Buffer) error {
+func (p *Program) processDir(wd string, path string, buff *bytes.Buffer) error {
+	var cmd *exec.Cmd
 	var cmdOut bytes.Buffer
-	shortFlagStr := ""
-	if config.short {
-		shortFlagStr = "-short"
-	}
 	wd, err := os.Getwd()
 	if err != nil {
 		return err
@@ -265,18 +262,39 @@ func processDir(path string, config *Config, buff *bytes.Buffer) error {
 	}
 	defer os.RemoveAll(outDir)
 
-	if config.verbose {
-		fmt.Printf("Processing: go test %s -covermode=%s -coverprofile=profile.coverprofile -outputdir=%s\n",
-			shortFlagStr, config.cover, outDir)
+	if p.verbose {
+		rel, err := filepath.Rel(wd, path)
+		if err != nil {
+			return fmt.Errorf("error creating relative path")
+		}
+		fmt.Fprintf(p.out, "Processing dir: %s\n", rel)
+		if p.short {
+			fmt.Fprintf(p.out,
+				"Processing: go test -short -covermode=%s -coverprofile=profile.coverprofile -outputdir=%s\n",
+				p.cover, outDir)
+		} else {
+			fmt.Fprintf(p.out,
+				"Processing: go test -covermode=%s -coverprofile=profile.coverprofile -outputdir=%s\n",
+				p.cover, outDir)
+		}
 	}
 
-	cmd := exec.Command("go",
-		"test",
-		shortFlagStr,
-		"-covermode="+config.cover,
-		"-coverprofile=profile.coverprofile",
-		"-outputdir="+outDir,
-	)
+	if p.short {
+		cmd = exec.Command("go",
+			"test",
+			"-short",
+			"-covermode="+p.cover,
+			"-coverprofile=profile.coverprofile",
+			"-outputdir="+outDir,
+		)
+	} else {
+		cmd = exec.Command("go",
+			"test",
+			"-covermode="+p.cover,
+			"-coverprofile=profile.coverprofile",
+			"-outputdir="+outDir,
+		)
+	}
 	cmd.Stdout = &cmdOut
 	if err := cmd.Run(); err != nil {
 		return GoTestError{
@@ -292,4 +310,9 @@ func processDir(path string, config *Config, buff *bytes.Buffer) error {
 
 	_, err = buff.Write(b)
 	return err
+}
+
+func main() {
+	InitProgram(os.Args, os.Stdout, os.Stderr)
+	os.Exit(program.Run())
 }
