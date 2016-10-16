@@ -56,12 +56,6 @@ const (
 	outFilename    = "roveralls.coverprofile"
 )
 
-type InvalidCoverModeError string
-
-func (e InvalidCoverModeError) Error() string {
-	return fmt.Sprintf("invalid covermode '%s'", string(e))
-}
-
 type GoTestError struct {
 	err    error
 	output string
@@ -93,10 +87,16 @@ type Program struct {
 	flagSet *flag.FlagSet
 	out     io.Writer
 	outErr  io.Writer
+	gopath  string
 }
 
-func InitProgram(cmdArgs []string, out io.Writer, outErr io.Writer) {
-	program = &Program{out: out, outErr: outErr, cmdArgs: cmdArgs}
+func InitProgram(
+	cmdArgs []string,
+	out io.Writer,
+	outErr io.Writer,
+	gopath string,
+) {
+	program = &Program{out: out, outErr: outErr, cmdArgs: cmdArgs, gopath: gopath}
 	program.initFlagSet()
 }
 
@@ -104,11 +104,11 @@ func (p *Program) Run() int {
 	if err := p.flagSet.Parse(p.cmdArgs[1:]); err != nil {
 		return 1
 	}
-	if err := p.handleFlags(); err != nil {
-		fmt.Fprintf(p.outErr, "%s\n", err)
-		if _, ok := err.(InvalidCoverModeError); ok {
-			subUsage(p.outErr)
-		}
+	if isProblem := p.handleGOPATH(); isProblem {
+		return 1
+	}
+
+	if isProblem := p.handleFlags(); isProblem {
 		return 1
 	}
 	if p.help {
@@ -153,23 +153,27 @@ func (p *Program) initFlagSet() {
 	p.flagSet.BoolVar(&p.help, "help", false, "Display this help")
 }
 
-func (p *Program) handleFlags() error {
-	gopath := filepath.Clean(os.Getenv("GOPATH"))
-	if p.help {
-		return nil
-	}
-
+// returns true if a problem, else false
+func (p *Program) handleGOPATH() bool {
+	gopath := filepath.Clean(p.gopath)
 	if p.verbose {
 		fmt.Fprintln(p.out, "GOPATH:", gopath)
 	}
 
 	if len(gopath) == 0 || gopath == "." {
-		return fmt.Errorf("invalid GOPATH '%s'", gopath)
+		fmt.Fprintf(p.outErr, "invalid GOPATH '%s'\n", gopath)
+		return true
 	}
+	return false
+}
 
+// returns true if a problem, else false
+func (p *Program) handleFlags() bool {
 	validCoverModes := map[string]bool{"set": true, "count": true, "atomic": true}
 	if _, ok := validCoverModes[p.cover]; !ok {
-		return InvalidCoverModeError(p.cover)
+		fmt.Fprintf(p.outErr, "invalid covermode '%s'\n", p.cover)
+		subUsage(p.outErr)
+		return true
 	}
 
 	arr := strings.Split(p.ignore, ",")
@@ -177,7 +181,7 @@ func (p *Program) handleFlags() error {
 	for _, v := range arr {
 		p.ignores[v] = true
 	}
-	return nil
+	return false
 }
 
 var modeRegexp = regexp.MustCompile("mode: [a-z]+\n")
@@ -313,6 +317,6 @@ func (p *Program) processDir(wd string, path string, buff *bytes.Buffer) error {
 }
 
 func main() {
-	InitProgram(os.Args, os.Stdout, os.Stderr)
+	InitProgram(os.Args, os.Stdout, os.Stderr, os.Getenv("GOPATH"))
 	os.Exit(program.Run())
 }

@@ -13,7 +13,7 @@ import (
 )
 
 func TestSubMain(t *testing.T) {
-	InitProgram(os.Args, os.Stdout, os.Stderr)
+	InitProgram(os.Args, os.Stdout, os.Stderr, os.Getenv("GOPATH"))
 	cases := []struct {
 		dir            string
 		cmdArgs        []string
@@ -119,7 +119,7 @@ func TestSubMain(t *testing.T) {
 	for _, c := range cases {
 		var gotOut bytes.Buffer
 		var gotErr bytes.Buffer
-		InitProgram(c.cmdArgs, &gotOut, &gotErr)
+		InitProgram(c.cmdArgs, &gotOut, &gotErr, os.Getenv("GOPATH"))
 		if err := os.Chdir(wd); err != nil {
 			t.Fatalf("ChDir(%s) err: %s", c.dir, err)
 		}
@@ -158,25 +158,42 @@ func TestSubMain(t *testing.T) {
 }
 
 func TestSubMain_errors(t *testing.T) {
-	InitProgram(os.Args, os.Stdout, os.Stderr)
+	InitProgram(os.Args, os.Stdout, os.Stderr, os.Getenv("GOPATH"))
 	cases := []struct {
 		dir          string
 		cmdArgs      []string
+		gopath       string
 		wantExitCode int
 		wantOut      string
 		wantErr      string
 	}{
 		{dir: "fixtures",
 			cmdArgs:      []string{os.Args[0], "-covermode=nothing"},
+			gopath:       os.Getenv("GOPATH"),
 			wantExitCode: 1,
 			wantOut:      "",
 			wantErr:      "invalid covermode 'nothing'\n" + usageMsg(),
 		},
 		{dir: "fixtures",
 			cmdArgs:      []string{os.Args[0], "-bob"},
+			gopath:       os.Getenv("GOPATH"),
 			wantExitCode: 1,
 			wantOut:      "",
 			wantErr:      "flag provided but not defined: -bob\n" + usagePartialMsg(),
+		},
+		{dir: "fixtures",
+			cmdArgs:      []string{os.Args[0], "-covermode=count"},
+			gopath:       "",
+			wantExitCode: 1,
+			wantOut:      "",
+			wantErr:      "invalid GOPATH '.'\n",
+		},
+		{dir: "fixtures",
+			cmdArgs:      []string{os.Args[0], "-covermode=count"},
+			gopath:       ".",
+			wantExitCode: 1,
+			wantOut:      "",
+			wantErr:      "invalid GOPATH '.'\n",
 		},
 	}
 	wd, err := os.Getwd()
@@ -187,7 +204,7 @@ func TestSubMain_errors(t *testing.T) {
 	for _, c := range cases {
 		var gotOut bytes.Buffer
 		var gotErr bytes.Buffer
-		InitProgram(c.cmdArgs, &gotOut, &gotErr)
+		InitProgram(c.cmdArgs, &gotOut, &gotErr, c.gopath)
 		if err := os.Chdir(wd); err != nil {
 			t.Fatalf("ChDir(%s) err: %s", c.dir, err)
 		}
@@ -207,15 +224,6 @@ func TestSubMain_errors(t *testing.T) {
 		if gotOut.String() != c.wantOut {
 			t.Errorf("Run: gotOut: %s, wantOut: %s", gotOut.String(), c.wantOut)
 		}
-	}
-}
-
-func TestInvalidCoverModeErrorError(t *testing.T) {
-	err := InvalidCoverModeError("fred")
-	want := "invalid covermode 'fred'"
-	got := err.Error()
-	if got != want {
-		t.Errorf("Error() got: %s, want: %s", got, want)
 	}
 }
 
