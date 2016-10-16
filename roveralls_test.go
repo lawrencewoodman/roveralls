@@ -227,6 +227,16 @@ func TestRun_errors(t *testing.T) {
 	}
 }
 
+func TestUsage(t *testing.T) {
+	var gotErr bytes.Buffer
+	InitProgram(os.Args, os.Stdout, &gotErr, os.Getenv("GOPATH"))
+	Usage()
+	want := usageMsg()
+	if gotErr.String() != want {
+		t.Errorf("Usage: got: %s, want: %s", gotErr.String(), want)
+	}
+}
+
 func TestGoTestErrorError(t *testing.T) {
 	err := GoTestError{
 		err:    errors.New("this is an error"),
