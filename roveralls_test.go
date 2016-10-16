@@ -12,7 +12,7 @@ import (
 	"testing"
 )
 
-func TestSubMain(t *testing.T) {
+func TestRun(t *testing.T) {
 	InitProgram(os.Args, os.Stdout, os.Stderr, os.Getenv("GOPATH"))
 	cases := []struct {
 		dir            string
@@ -157,7 +157,7 @@ func TestSubMain(t *testing.T) {
 	}
 }
 
-func TestSubMain_errors(t *testing.T) {
+func TestRun_errors(t *testing.T) {
 	InitProgram(os.Args, os.Stdout, os.Stderr, os.Getenv("GOPATH"))
 	cases := []struct {
 		dir          string
