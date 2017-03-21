@@ -4,7 +4,7 @@ platform:
   - x86
   - x64
 
-clone_folder: c:\gopath\src\github.com\LawrenceWoodman\ddataset
+clone_folder: c:\gopath\src\github.com\lawrencewoodman\ddataset
 
 environment:
   GOPATH: c:\gopath
