@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"syscall"
 	"testing"
 )
 
@@ -227,6 +228,46 @@ func TestRun_errors(t *testing.T) {
 	}
 }
 
+func TestProcessDir_errors(t *testing.T) {
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Chdir(wd)
+	cases := []struct {
+		cover   string
+		path    string
+		wantErr error
+	}{
+		{cover: "count",
+			path:    ".",
+			wantErr: errors.New("can't create relative path"),
+		},
+		{cover: "count",
+			path: filepath.Join("fixtures", "nonexistant"),
+			wantErr: &os.PathError{
+				"chdir",
+				filepath.Join("fixtures", "nonexistant"),
+				syscall.ENOENT,
+			},
+		},
+		{cover: "bob",
+			path: wd,
+			wantErr: goTestError{
+				stderr: "invalid flag argument for -covermode: \"bob\"",
+				stdout: "",
+			},
+		},
+	}
+	for i, c := range cases {
+		var gotOut bytes.Buffer
+		var pOut bytes.Buffer
+		program := &Program{cover: c.cover, out: &pOut, verbose: true}
+		err := program.processDir(wd, c.path, &gotOut)
+		checkErrorMatch(t, fmt.Sprintf("(%d) processDir: ", i), err, c.wantErr)
+	}
+}
+
 func TestUsage(t *testing.T) {
 	var gotErr bytes.Buffer
 	initProgram(os.Args, os.Stdout, &gotErr, os.Getenv("GOPATH"))
@@ -239,8 +280,8 @@ func TestUsage(t *testing.T) {
 
 func TestGoTestErrorError(t *testing.T) {
 	err := goTestError{
-		err:    errors.New("this is an error"),
-		output: "baby did a bad bad thing",
+		stderr: "this is an error",
+		stdout: "baby did a bad bad thing",
 	}
 	want := "error from go test: this is an error\noutput: baby did a bad bad thing"
 	got := err.Error()
@@ -331,4 +372,64 @@ func filesTested(wd string, filename string) (map[string]bool, error) {
 		}
 	}
 	return files, scanner.Err()
+}
+
+func checkErrorMatch(t *testing.T, context string, got, want error) {
+	if got == nil && want == nil {
+		return
+	}
+	if got == nil || want == nil {
+		t.Errorf("%s got err: %s, want : %s", context, got, want)
+		return
+	}
+	switch x := want.(type) {
+	case *os.PathError:
+		if err := checkPathErrorMatch(got, x); err != nil {
+			t.Errorf("%s %s", context, err)
+		}
+		return
+	case goTestError:
+		if err := checkGoTestErrorMatch(got, x); err != nil {
+			t.Errorf("%s %s", context, err)
+		}
+		return
+	}
+	if got.Error() != want.Error() {
+		t.Errorf("%s got err: %s, want : %s", context, got, want)
+	}
+}
+
+func checkPathErrorMatch(checkErr error, wantErr *os.PathError) error {
+	perr, ok := checkErr.(*os.PathError)
+	if !ok {
+		return fmt.Errorf("got err type: %T, want error type: os.PathError",
+			checkErr)
+	}
+	if perr.Op != wantErr.Op {
+		return fmt.Errorf("got perr.Op: %s, want: %s", perr.Op, wantErr.Op)
+	}
+	if filepath.Clean(perr.Path) != filepath.Clean(wantErr.Path) {
+		return fmt.Errorf("got perr.Path: %s, want: %s", perr.Path, wantErr.Path)
+	}
+	if perr.Err != wantErr.Err {
+		return fmt.Errorf("got perr.Err: %s, want: %s", perr.Err, wantErr.Err)
+	}
+	return nil
+}
+
+func checkGoTestErrorMatch(checkErr error, wantErr goTestError) error {
+	gerr, ok := checkErr.(goTestError)
+	if !ok {
+		return fmt.Errorf("got err type: %T, want error type: goTestError",
+			checkErr)
+	}
+	if strings.Trim(gerr.stderr, " \n") != strings.Trim(wantErr.stderr, " \n") {
+		return fmt.Errorf("got gerr.stderr: %s, want: %s",
+			gerr.stderr, wantErr.stderr)
+	}
+	if gerr.stdout != wantErr.stdout {
+		return fmt.Errorf("got gerr.stdout: %s, want: %s",
+			gerr.stdout, wantErr.stdout)
+	}
+	return nil
 }

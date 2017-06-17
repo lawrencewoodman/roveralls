@@ -58,13 +58,13 @@ const (
 )
 
 type goTestError struct {
-	err    error
-	output string
+	stderr string
+	stdout string
 }
 
 func (e goTestError) Error() string {
 	return fmt.Sprintf("error from go test: %s\noutput: %s",
-		e.err, e.output)
+		e.stderr, e.stdout)
 }
 
 type walkingError struct {
@@ -253,6 +253,7 @@ func (p *Program) makeWalker(
 func (p *Program) processDir(wd string, path string, buff *bytes.Buffer) error {
 	var cmd *exec.Cmd
 	var cmdOut bytes.Buffer
+	var cmdErr bytes.Buffer
 
 	if err := os.Chdir(path); err != nil {
 		return err
@@ -268,7 +269,7 @@ func (p *Program) processDir(wd string, path string, buff *bytes.Buffer) error {
 	if p.verbose {
 		rel, err := filepath.Rel(wd, path)
 		if err != nil {
-			return fmt.Errorf("error creating relative path")
+			return fmt.Errorf("can't create relative path")
 		}
 		fmt.Fprintf(p.out, "Processing dir: %s\n", rel)
 		if p.short {
@@ -299,10 +300,11 @@ func (p *Program) processDir(wd string, path string, buff *bytes.Buffer) error {
 		)
 	}
 	cmd.Stdout = &cmdOut
+	cmd.Stderr = &cmdErr
 	if err := cmd.Run(); err != nil {
 		return goTestError{
-			err:    err,
-			output: cmdOut.String(),
+			stderr: cmdErr.String(),
+			stdout: cmdOut.String(),
 		}
 	}
 
