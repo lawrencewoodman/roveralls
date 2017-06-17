@@ -253,10 +253,6 @@ func (p *Program) makeWalker(
 func (p *Program) processDir(wd string, path string, buff *bytes.Buffer) error {
 	var cmd *exec.Cmd
 	var cmdOut bytes.Buffer
-	wd, err := os.Getwd()
-	if err != nil {
-		return err
-	}
 
 	if err := os.Chdir(path); err != nil {
 		return err
