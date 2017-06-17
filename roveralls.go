@@ -19,6 +19,7 @@ import (
 // This is a horrible kludge so that errors can be tested properly
 var program *Program
 
+// Usage is used by flag package if an error occurs when parsing flags
 var Usage = func() {
 	subUsage(program.outErr)
 }
@@ -56,12 +57,12 @@ const (
 	outFilename    = "roveralls.coverprofile"
 )
 
-type GoTestError struct {
+type goTestError struct {
 	err    error
 	output string
 }
 
-func (e GoTestError) Error() string {
+func (e goTestError) Error() string {
 	return fmt.Sprintf("error from go test: %s\noutput: %s",
 		e.err, e.output)
 }
@@ -301,7 +302,7 @@ func (p *Program) processDir(wd string, path string, buff *bytes.Buffer) error {
 	}
 	cmd.Stdout = &cmdOut
 	if err := cmd.Run(); err != nil {
-		return GoTestError{
+		return goTestError{
 			err:    err,
 			output: cmdOut.String(),
 		}

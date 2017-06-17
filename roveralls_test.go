@@ -237,8 +237,8 @@ func TestUsage(t *testing.T) {
 	}
 }
 
-func TestGoTestErrorError(t *testing.T) {
-	err := GoTestError{
+func TestgoTestErrorError(t *testing.T) {
+	err := goTestError{
 		err:    errors.New("this is an error"),
 		output: "baby did a bad bad thing",
 	}
