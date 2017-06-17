@@ -91,7 +91,7 @@ type Program struct {
 	gopath  string
 }
 
-func InitProgram(
+func initProgram(
 	cmdArgs []string,
 	out io.Writer,
 	outErr io.Writer,
@@ -318,6 +318,6 @@ func (p *Program) processDir(wd string, path string, buff *bytes.Buffer) error {
 }
 
 func main() {
-	InitProgram(os.Args, os.Stdout, os.Stderr, os.Getenv("GOPATH"))
+	initProgram(os.Args, os.Stdout, os.Stderr, os.Getenv("GOPATH"))
 	os.Exit(program.Run())
 }

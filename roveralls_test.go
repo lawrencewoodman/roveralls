@@ -13,7 +13,7 @@ import (
 )
 
 func TestRun(t *testing.T) {
-	InitProgram(os.Args, os.Stdout, os.Stderr, os.Getenv("GOPATH"))
+	initProgram(os.Args, os.Stdout, os.Stderr, os.Getenv("GOPATH"))
 	cases := []struct {
 		dir            string
 		cmdArgs        []string
@@ -119,7 +119,7 @@ func TestRun(t *testing.T) {
 	for _, c := range cases {
 		var gotOut bytes.Buffer
 		var gotErr bytes.Buffer
-		InitProgram(c.cmdArgs, &gotOut, &gotErr, os.Getenv("GOPATH"))
+		initProgram(c.cmdArgs, &gotOut, &gotErr, os.Getenv("GOPATH"))
 		if err := os.Chdir(wd); err != nil {
 			t.Fatalf("ChDir(%s) err: %s", c.dir, err)
 		}
@@ -158,7 +158,7 @@ func TestRun(t *testing.T) {
 }
 
 func TestRun_errors(t *testing.T) {
-	InitProgram(os.Args, os.Stdout, os.Stderr, os.Getenv("GOPATH"))
+	initProgram(os.Args, os.Stdout, os.Stderr, os.Getenv("GOPATH"))
 	cases := []struct {
 		dir          string
 		cmdArgs      []string
@@ -204,7 +204,7 @@ func TestRun_errors(t *testing.T) {
 	for _, c := range cases {
 		var gotOut bytes.Buffer
 		var gotErr bytes.Buffer
-		InitProgram(c.cmdArgs, &gotOut, &gotErr, c.gopath)
+		initProgram(c.cmdArgs, &gotOut, &gotErr, c.gopath)
 		if err := os.Chdir(wd); err != nil {
 			t.Fatalf("ChDir(%s) err: %s", c.dir, err)
 		}
@@ -229,7 +229,7 @@ func TestRun_errors(t *testing.T) {
 
 func TestUsage(t *testing.T) {
 	var gotErr bytes.Buffer
-	InitProgram(os.Args, os.Stdout, &gotErr, os.Getenv("GOPATH"))
+	initProgram(os.Args, os.Stdout, &gotErr, os.Getenv("GOPATH"))
 	Usage()
 	want := usageMsg()
 	if gotErr.String() != want {
