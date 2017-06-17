@@ -134,7 +134,7 @@ func TestRun(t *testing.T) {
 		}
 
 		if gotErr.String() != "" {
-			t.Errorf("Run: gotErr: %s", gotErr)
+			t.Errorf("Run: gotErr: %s", gotErr.String())
 		}
 
 		if err := checkOutput(c.wantOutRegexps, gotOut.String()); err != nil {
@@ -146,7 +146,7 @@ func TestRun(t *testing.T) {
 			t.Fatalf("filesTested err: %s", err)
 		}
 		if len(gotFiles) != len(c.wantFiles) {
-			t.Errorf("Wrong files tested (cmdArgs: %s).  want: %s, got: %s",
+			t.Errorf("Wrong files tested (cmdArgs: %s).  want: %s, got: %v",
 				c.cmdArgs, c.wantFiles, gotFiles)
 		}
 		for _, wantFile := range c.wantFiles {
