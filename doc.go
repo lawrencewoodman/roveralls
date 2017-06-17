@@ -32,7 +32,7 @@ To see the help for the command:
 
 View Output in a Web Browser
 
-To view the code coverage for you packge in a browser:
+To view the code coverage for you package in a browser:
 
     go tool cover -html=roveralls.coverprofile
 

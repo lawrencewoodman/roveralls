@@ -16,7 +16,7 @@ import (
 	"strings"
 )
 
-// This is a horrible cludge so that errors can be tested properly
+// This is a horrible kludge so that errors can be tested properly
 var program *Program
 
 var Usage = func() {
