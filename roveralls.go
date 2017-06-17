@@ -67,12 +67,12 @@ func (e goTestError) Error() string {
 		e.err, e.output)
 }
 
-type WalkingError struct {
+type walkingError struct {
 	dir string
 	err error
 }
 
-func (e WalkingError) Error() string {
+func (e walkingError) Error() string {
 	return fmt.Sprintf("could not walk working directory '%s': %s",
 		e.dir, e.err)
 }
@@ -200,7 +200,7 @@ func (p *Program) testCoverage() error {
 
 	walker := p.makeWalker(wd, &buff)
 	if err := filepath.Walk(wd, walker); err != nil {
-		return WalkingError{
+		return walkingError{
 			dir: wd,
 			err: err,
 		}

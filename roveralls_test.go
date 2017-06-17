@@ -237,7 +237,7 @@ func TestUsage(t *testing.T) {
 	}
 }
 
-func TestgoTestErrorError(t *testing.T) {
+func TestGoTestErrorError(t *testing.T) {
 	err := goTestError{
 		err:    errors.New("this is an error"),
 		output: "baby did a bad bad thing",
@@ -250,7 +250,7 @@ func TestgoTestErrorError(t *testing.T) {
 }
 
 func TestWalkingErrorError(t *testing.T) {
-	err := WalkingError{
+	err := walkingError{
 		err: errors.New("this is an error"),
 		dir: "/tmp/someplace",
 	}
