@@ -246,9 +246,9 @@ func TestProcessDir_errors(t *testing.T) {
 		{cover: "count",
 			path: filepath.Join("fixtures", "nonexistant"),
 			wantErr: &os.PathError{
-				"chdir",
-				filepath.Join("fixtures", "nonexistant"),
-				syscall.ENOENT,
+				Op:   "chdir",
+				Path: filepath.Join("fixtures", "nonexistant"),
+				Err:  syscall.ENOENT,
 			},
 		},
 		{cover: "bob",
