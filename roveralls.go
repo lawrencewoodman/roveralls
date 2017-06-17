@@ -77,6 +77,7 @@ func (e walkingError) Error() string {
 		e.dir, e.err)
 }
 
+// Program contains the configuration and state of the program
 type Program struct {
 	ignore  string
 	cover   string
@@ -101,6 +102,7 @@ func initProgram(
 	program.initFlagSet()
 }
 
+// Run starts the program
 func (p *Program) Run() int {
 	if err := p.flagSet.Parse(p.cmdArgs[1:]); err != nil {
 		return 1
